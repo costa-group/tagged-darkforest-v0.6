@@ -6,9 +6,9 @@
 */
 pragma circom 2.0.3;
 
-include "../../node_modules/circomlib/circuits/mimcsponge.circom";
-include "../../node_modules/circomlib/circuits/comparators.circom";
-include "../../node_modules/circomlib/circuits/bitify.circom";
+include "circuits/mimcsponge.circom";
+include "circuits/comparators.circom";
+include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
 
 template Init() {
@@ -17,10 +17,11 @@ template Init() {
     // todo: separate spaceTypeKey and planetHashKey in SNARKs
     signal input PLANETHASH_KEY;
     signal input SPACETYPE_KEY;
-    signal input SCALE; // must be power of 2 at most 16384 so that DENOMINATOR works
-    signal input xMirror; // 1 is true, 0 is false
-    signal input yMirror; // 1 is true, 0 is false
-
+    signal input {powerof2, max} SCALE; // must be power of 2 at most 16384 so that DENOMINATOR works
+    signal input {binary} xMirror; // 1 is true, 0 is false
+    signal input {binary} yMirror; // 1 is true, 0 is false
+    
+    assert(SCALE.max <= 16384);
     // Private signals
     signal input x;
     signal input y;
@@ -29,10 +30,8 @@ template Init() {
     signal output perl;
 
     /* check abs(x), abs(y) <= 2^31 */
-    component n2bx = Num2Bits(32);
-    n2bx.in <== x + (1 << 31);
-    component n2by = Num2Bits(32);
-    n2by.in <== y + (1 << 31);
+    _ <== Num2Bits(32)(x + (1 << 31));
+    _ <== Num2Bits(32)(y + (1 << 31));
 
     /* check x^2 + y^2 < r^2 */
     component compUpper = LessThan(64);
@@ -67,14 +66,31 @@ template Init() {
     pub <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    component perlin = MultiScalePerlin();
-    perlin.p[0] <== x;
-    perlin.p[1] <== y;
-    perlin.KEY <== SPACETYPE_KEY;
-    perlin.SCALE <== SCALE;
-    perlin.xMirror <== xMirror;
-    perlin.yMirror <== yMirror;
-    perl <== perlin.out;
+    perl <== MultiScalePerlin()([x,y],SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
 
-component main { public [ r, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = Init();
+template mainInit(){
+    // Public signals
+    signal input r;
+    // todo: separate spaceTypeKey and planetHashKey in SNARKs
+    signal input PLANETHASH_KEY;
+    signal input SPACETYPE_KEY;
+    signal input SCALE; // must be power of 2 at most 16384 so that DENOMINATOR works
+    signal input xMirror; // 1 is true, 0 is false
+    signal input yMirror; // 1 is true, 0 is false
+
+    // Private signals
+    signal input x;
+    signal input y;
+
+
+    signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
+    signal output (pub, perl) <== Init()(r, PLANETHASH_KEY, SPACETYPE_KEY, TaggedSCALE, AddBinaryTag()(xMirror), AddBinaryTag()(yMirror), x, y);
+}
+
+template addPowerOf2Tag(){
+    signal input in;
+    //To add constraints.
+    signal output {powerof2} out <== in;
+}
+component main { public [ r, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainInit();

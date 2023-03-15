@@ -8,9 +8,9 @@
 */
 pragma circom 2.0.3;
 
-include "../../node_modules/circomlib/circuits/mimcsponge.circom";
-include "../../node_modules/circomlib/circuits/comparators.circom";
-include "../../node_modules/circomlib/circuits/bitify.circom";
+include "circuits/mimcsponge.circom";
+include "circuits/comparators.circom";
+include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
 
 template Move() {
@@ -19,10 +19,10 @@ template Move() {
     signal input distMax;
     signal input PLANETHASH_KEY;
     signal input SPACETYPE_KEY;
-    signal input SCALE; // must be power of 2 at most 16384 so that DENOMINATOR works
-    signal input xMirror; // 1 is true, 0 is false
-    signal input yMirror; // 1 is true, 0 is false
-
+    signal input {powerof2, max} SCALE; // must be power of 2 at most 16384 so that DENOMINATOR works
+    signal input {binary} xMirror; // 1 is true, 0 is false
+    signal input {binary} yMirror; // 1 is true, 0 is false
+    assert(SCALE.max <= 16384);
     // Private signals
     signal input x1;
     signal input y1;
@@ -34,14 +34,10 @@ template Move() {
     signal output perl2;
 
     /* check abs(x1), abs(y1), abs(x2), abs(y2) <= 2^31 */
-    component n2bx1 = Num2Bits(32);
-    n2bx1.in <== x1 + (1 << 31);
-    component n2by1 = Num2Bits(32);
-    n2by1.in <== y1 + (1 << 31);
-    component n2bx2 = Num2Bits(32);
-    n2bx2.in <== x2 + (1 << 31);
-    component n2by2 = Num2Bits(32);
-    n2by2.in <== y2 + (1 << 31);
+    _ <== Num2Bits(32)(x1 + (1 << 31));
+    _ <== Num2Bits(32)(y1 + (1 << 31));
+    _ <== Num2Bits(32)(x2 + (1 << 31));
+    _ <== Num2Bits(32)(y2 + (1 << 31));
 
     /* check x2^2 + y2^2 < r^2 */
 
@@ -91,14 +87,37 @@ template Move() {
     pub2 <== mimc2.outs[0];
 
     /* check perlin(x2, y2) = p2 */
-    component perlin = MultiScalePerlin();
-    perlin.p[0] <== x2;
-    perlin.p[1] <== y2;
-    perlin.KEY <== SPACETYPE_KEY;
-    perlin.SCALE <== SCALE;
-    perlin.xMirror <== xMirror;
-    perlin.yMirror <== yMirror;
-    perl2 <== perlin.out;
+    perl2 <== MultiScalePerlin()([x2,y2], SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
 
-component main { public [ r, distMax, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = Move();
+template mainMove(){
+     // Public signals
+    signal input r;
+    signal input distMax;
+    signal input PLANETHASH_KEY;
+    signal input SPACETYPE_KEY;
+    signal input SCALE; // must be power of 2 at most 16384 so that DENOMINATOR works
+    signal input xMirror; // 1 is true, 0 is false
+    signal input yMirror; // 1 is true, 0 is false
+
+    // Private signals
+    signal input x1;
+    signal input y1;
+    signal input x2;
+    signal input y2;
+
+    signal output pub1;
+    signal output pub2;
+    signal output perl2;
+
+    signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
+    (pub1,pub2,perl2) <== Move()(r,distMax, PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE, AddBinaryTag()(xMirror),AddBinaryTag()(yMirror),x1,y1,x2,y2);
+}
+
+template addPowerOf2Tag(){
+    signal input in;
+    //To add constraints.
+    signal output {powerof2} out <== in;
+}
+
+component main { public [ r, distMax, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainMove();

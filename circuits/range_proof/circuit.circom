@@ -1,7 +1,7 @@
 pragma circom 2.0.3;
 
-include "../../node_modules/circomlib/circuits/comparators.circom";
-include "../../node_modules/circomlib/circuits/bitify.circom";
+include "circuits/comparators.circom";
+include "circuits/bitify.circom";
 
 // NB: RangeProof is inclusive.
 // input: field element, whose abs is claimed to be <= than max_abs_value
@@ -12,22 +12,14 @@ template RangeProof(bits) {
     signal input max_abs_value;
 
     /* check that both max and abs(in) are expressible in `bits` bits  */
-    component n2b1 = Num2Bits(bits+1);
-    n2b1.in <== in + (1 << bits);
-    component n2b2 = Num2Bits(bits);
-    n2b2.in <== max_abs_value;
+    _ <== Num2Bits(bits+1)(in + (1 << bits));
+    _ <== Num2Bits(bits)(max_abs_value);
 
     /* check that in + max is between 0 and 2*max */
-    component lowerBound = LessThan(bits+1);
-    component upperBound = LessThan(bits+1);
-
-    lowerBound.in[0] <== max_abs_value + in;
-    lowerBound.in[1] <== 0;
-    lowerBound.out === 0;
-
-    upperBound.in[0] <== 2 * max_abs_value;
-    upperBound.in[1] <== max_abs_value + in;
-    upperBound.out === 0;
+    signal lowerBound <== LessThan(bits+1)([max_abs_value + in, 0]);
+    lowerBound === 0;
+    signal upperBound <== LessThan(bits+1)([2*max_abs_value, max_abs_value + in]);
+    upperBound === 0;
 }
 
 // input: n field elements, whose abs are claimed to be less than max_abs_value
@@ -38,9 +30,7 @@ template MultiRangeProof(n, bits) {
     component rangeProofs[n];
 
     for (var i = 0; i < n; i++) {
-        rangeProofs[i] = RangeProof(bits);
-        rangeProofs[i].in <== in[i];
-        rangeProofs[i].max_abs_value <== max_abs_value;
+        RangeProof(bits)(in[i],max_abs_value);
     }
 }
 

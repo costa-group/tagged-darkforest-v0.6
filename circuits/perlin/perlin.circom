@@ -1,9 +1,9 @@
 pragma circom 2.0.3;
 
-include "../../node_modules/circomlib/circuits/mimcsponge.circom";
-include "../../node_modules/circomlib/circuits/comparators.circom";
-include "../../node_modules/circomlib/circuits/sign.circom";
-include "../../node_modules/circomlib/circuits/bitify.circom";
+include "circuits/mimcsponge.circom";
+include "circuits/comparators.circom";
+include "circuits/sign.circom";
+include "circuits/bitify.circom";
 include "../range_proof/circuit.circom";
 include "QuinSelector.circom";
 
@@ -12,7 +12,7 @@ include "QuinSelector.circom";
 template Random() {
     signal input in[3];
     signal input KEY;
-    signal output out;
+    signal output {max} out;
 
     component mimc = MiMCSponge(3, 4, 1);
 
@@ -23,14 +23,16 @@ template Random() {
 
     component num2Bits = Num2Bits(254);
     num2Bits.in <== mimc.outs[0];
+    out.max = 15;
     out <== num2Bits.out[3] * 8 + num2Bits.out[2] * 4 + num2Bits.out[1] * 2 + num2Bits.out[0];
+    _ <== num2Bits.out; //the remaining ones do not matter.
 }
 
 // input: any field elements
 // output: 1 if field element is in (p/2, p-1], 0 otherwise
-template IsNegative() {
+/*template IsNegative() {
     signal input in;
-    signal output out;
+    signal output {binary} out;
 
     component num2Bits = Num2Bits(254);
     num2Bits.in <== in;
@@ -41,7 +43,7 @@ template IsNegative() {
     }
 
     out <== sign.sign;
-}
+}*/
 
 // input: dividend and divisor field elements in [0, sqrt(p))
 // output: remainder and quotient field elements in [0, p-1] and [0, sqrt(p)
@@ -59,10 +61,10 @@ template Modulo(divisor_bits, SQRT_P) {
     component is_neg = IsNegative();
     is_neg.in <== dividend;
 
-    signal output is_dividend_negative;
+    signal output {binary} is_dividend_negative;
     is_dividend_negative <== is_neg.out;
 
-    signal output dividend_adjustment;
+    signal output {oneorminusone} dividend_adjustment;
     dividend_adjustment <== 1 + is_dividend_negative * -2; // 1 or -1
 
     signal output abs_dividend;
@@ -72,22 +74,22 @@ template Modulo(divisor_bits, SQRT_P) {
     raw_remainder <-- abs_dividend % divisor;
 
     signal output neg_remainder;
-    neg_remainder <-- divisor - raw_remainder;
+    neg_remainder <== divisor - raw_remainder;
 
     // 0xsage: https://github.com/0xSage/nightmarket/blob/fc4e5264436c75d37940fead3f47d650927a9120/circuits/list/Perlin.circom#L93-L108
     component raw_rem_is_zero = IsZero();
     raw_rem_is_zero.in <== raw_remainder;
 
-    signal raw_rem_not_zero;
+    signal {binary} raw_rem_not_zero;
     raw_rem_not_zero <== 1 - raw_rem_is_zero.out;
 
-    signal iff;
+    signal {binary} iff;
     iff <== is_dividend_negative * raw_rem_not_zero;
 
-    signal is_neg_remainder;
+    signal is_neg_remainder; //it looks like binary but not.
     is_neg_remainder <== neg_remainder * iff;
 
-    signal elsef;
+    signal {binary} elsef;
     elsef <== 1 - iff;
 
     remainder <== raw_remainder * elsef + is_neg_remainder;
@@ -148,17 +150,15 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     signal input scale;
     signal input KEY;
 
-    component xmodulo = Modulo(scale_bits, SQRT_P);
-    xmodulo.dividend <== p[0];
-    xmodulo.divisor <== scale;
+    signal xmodulo_remainder;
+    (xmodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[0],scale);
 
-    component ymodulo = Modulo(scale_bits, SQRT_P);
-    ymodulo.dividend <== p[1];
-    ymodulo.divisor <== scale;
+    signal ymodulo_remainder;
+    (ymodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[1],scale);
 
     signal bottomLeftCoords[2];
-    bottomLeftCoords[0] <== p[0] - xmodulo.remainder;
-    bottomLeftCoords[1] <== p[1] - ymodulo.remainder;
+    bottomLeftCoords[0] <== p[0] - xmodulo_remainder;
+    bottomLeftCoords[1] <== p[1] - ymodulo_remainder;
 
     signal bottomRightCoords[2];
     bottomRightCoords[0] <== bottomLeftCoords[0] + scale;
@@ -266,8 +266,7 @@ template GetWeight(DENOMINATOR, WHICHCORNER) {
     signal nominator;
     nominator <== factor[0] * factor[1];
     signal output out;
-    out <-- nominator / DENOMINATOR;
-    nominator === out * DENOMINATOR;
+    out <== nominator / DENOMINATOR;
 }
 
 // dot product of two vector NUMERATORS
@@ -282,8 +281,7 @@ template Dot(DENOMINATOR) {
     prod[1] <== a[1] * b[1];
 
     sum <== prod[0] + prod[1];
-    out <-- sum / DENOMINATOR;
-    sum === out * DENOMINATOR;
+    out <== sum / DENOMINATOR;
 }
 
 // input: 4 gradient unit vectors (NUMERATORS)
@@ -341,8 +339,7 @@ template PerlinValue(DENOMINATOR) {
         dots[i].b[1] <== scaledDistVec[i][1];
 
         retNominator[i] <== dots[i].out * getWeights[i].out;
-        ret[i] <-- retNominator[i] / DENOMINATOR;
-        retNominator[i] === DENOMINATOR * ret[i];
+        ret[i] <== retNominator[i] / DENOMINATOR;
     }
 
     out <== ret[0] + ret[1] + ret[2] + ret[3];
@@ -380,14 +377,13 @@ template MultiScalePerlin() {
 
     signal input p[2];
     signal input KEY;
-    signal input SCALE; // power of 2 at most 16384 so that DENOMINATOR works
-    signal input xMirror; // 1 is true, 0 is false
-    signal input yMirror; // 1 is true, 0 is false
+    signal input {powerof2, max} SCALE; // power of 2 at most 16384 so that DENOMINATOR works
+    assert(SCALE.max <= 16384);
+    signal input {binary} xMirror; // 1 is true, 0 is false
+    signal input {binary} yMirror; // 1 is true, 0 is false
     signal output out;
     component perlins[3];
 
-    xMirror * (xMirror - 1) === 0;
-    yMirror * (yMirror - 1) === 0;
 
     component rp = MultiRangeProof(2, 35);
     rp.in[0] <== p[0];
@@ -406,8 +402,8 @@ template MultiScalePerlin() {
 
     // add perlins[0], perlins[1], perlins[2], and perlins[0] (again)
     component adder = CalculateTotal(4);
-    signal xSignShouldFlip[3];
-    signal ySignShouldFlip[3];
+    signal {binary} xSignShouldFlip[3];
+    signal {binary} ySignShouldFlip[3];
     for (var i = 0; i < 3; i++) {
         xSignShouldFlip[i] <== xIsNegative.out * yMirror; // should flip sign of x coord (p[0]) if yMirror is true (i.e. flip along vertical axis) and p[0] is negative
         ySignShouldFlip[i] <== yIsNegative.out * xMirror; // should flip sign of y coord (p[1]) if xMirror is true (i.e. flip along horizontal axis) and p[1] is negative
@@ -420,14 +416,12 @@ template MultiScalePerlin() {
     adder.in[3] <== perlins[0].out;
 
     signal outDividedByCount;
-    outDividedByCount <-- adder.out / 4;
-    adder.out === 4 * outDividedByCount;
+    outDividedByCount <== adder.out / 4;
 
     // outDividedByCount is between [-DENOMINATOR*sqrt(2)/2, DENOMINATOR*sqrt(2)/2]
-    component divBy16 = Modulo(DENOMINATOR_BITS, SQRT_P);
-    divBy16.dividend <== outDividedByCount * 16;
-    divBy16.divisor <== DENOMINATOR;
-    out <== divBy16.quotient + 16;
+    signal divBy16_quotient; // /4 and after than * 16; ¿?
+    (_,divBy16_quotient,_,_,_,_,_) <== Modulo(DENOMINATOR_BITS, SQRT_P)(outDividedByCount * 16, DENOMINATOR);
+    out <== divBy16_quotient + 16;
 }
 
 // component main = MultiScalePerlin(3); // if you change this n, you also need to recompute DENOMINATOR with JS.

@@ -1,18 +1,14 @@
 pragma circom 2.0.3;
 
-include "../../node_modules/circomlib/circuits/comparators.circom";
+include "circuits/comparators.circom";
 include "CalculateTotal.circom";
 
 template QuinSelector(choices) {
     signal input in[choices];
-    signal input index;
+    signal input {max} index;
     signal output out;
 
-    // Ensure that index < choices
-    component lessThan = LessThan(4);
-    lessThan.in[0] <== index;
-    lessThan.in[1] <== choices;
-    lessThan.out === 1;
+    assert(index.max < choices);
 
     component calcTotal = CalculateTotal(choices);
     component eqs[choices];
