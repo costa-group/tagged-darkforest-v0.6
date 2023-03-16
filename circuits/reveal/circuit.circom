@@ -9,25 +9,6 @@ include "circuits/mimcsponge.circom";
 include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
 
-template mainReveal(){
-    // Public signals
-    signal input x;
-    signal input y;
-    signal input PLANETHASH_KEY;
-    signal input SPACETYPE_KEY;
-    signal input SCALE; /// must be power of 2 at most 16384 so that DENOMINATOR works
-    signal input  xMirror; // 1 is true, 0 is false
-    signal input yMirror; // 1 is true, 0 is false
-  
-    signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    signal output (pub, perl) <== Reveal()(x,y,PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE,AddBinaryTag()(xMirror),AddBinaryTag()(yMirror));
-}
-
-template addPowerOf2Tag(){
-    signal input in;
-    //To add constraints.
-    signal output {powerof2} out <== in;
-}
 
 template Reveal() {
     // Public signals
@@ -62,6 +43,26 @@ template Reveal() {
 
     /* check perlin(x, y) = p */
     perl <== MultiScalePerlin()([x,y],SPACETYPE_KEY,SCALE, xMirror, yMirror);
+}
+
+template mainReveal(){
+    // Public signals
+    signal input x;
+    signal input y;
+    signal input PLANETHASH_KEY;
+    signal input SPACETYPE_KEY;
+    signal input SCALE; /// must be power of 2 at most 16384 so that DENOMINATOR works
+    signal input  xMirror; // 1 is true, 0 is false
+    signal input yMirror; // 1 is true, 0 is false
+  
+    signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
+    signal output (pub, perl) <== Reveal()(x,y,PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE,AddBinaryTag()(xMirror),AddBinaryTag()(yMirror));
+}
+
+template addPowerOf2Tag(){
+    signal input in;
+    //To add constraints.
+    signal output {powerof2} out <== in;
 }
 
 component main { public [ x, y, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainReveal();
