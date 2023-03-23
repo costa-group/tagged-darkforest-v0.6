@@ -27,8 +27,6 @@ template RangeProof(bits) {
 template MultiRangeProof(n, bits) {
     signal input in[n];
     signal input max_abs_value;
-    component rangeProofs[n];
-
     for (var i = 0; i < n; i++) {
         RangeProof(bits)(in[i],max_abs_value);
     }

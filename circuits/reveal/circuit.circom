@@ -8,12 +8,12 @@ pragma circom 2.0.3;
 include "circuits/mimcsponge.circom";
 include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
-
+include "circuits/tags_specifications.circom";
 
 template Reveal() {
     // Public signals
-    signal input x;
-    signal input y;
+    signal input {maxbit_abs} x;
+    signal input {maxbit_abs} y;
     signal input PLANETHASH_KEY;
     signal input SPACETYPE_KEY;
     signal input {powerof2, max} SCALE; /// must be power of 2 at most 16384 so that DENOMINATOR works
@@ -24,9 +24,8 @@ template Reveal() {
     signal output pub;
     signal output perl;
 
-    /* check abs(x), abs(y) <= 2^31 */
-    _ <== Num2Bits(32)(x + (1 << 31));
-    _ <== Num2Bits(32)(y + (1 << 31));
+    assert(x.maxbit_abs == 31);
+    assert(y.maxbit_abs == 31);
 
     /* check MiMCSponge(x,y) = pub */
     /*
@@ -42,7 +41,10 @@ template Reveal() {
     pub <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    perl <== MultiScalePerlin()([x,y],SPACETYPE_KEY,SCALE, xMirror, yMirror);
+    signal {maxbit_abs} p[2];
+    p.maxbit_abs = x.maxbit_abs;
+    p <== [x,y];
+    perl <== MultiScalePerlin()(p,SPACETYPE_KEY,SCALE, xMirror, yMirror);
 }
 
 template mainReveal(){
@@ -52,17 +54,14 @@ template mainReveal(){
     signal input PLANETHASH_KEY;
     signal input SPACETYPE_KEY;
     signal input SCALE; /// must be power of 2 at most 16384 so that DENOMINATOR works
-    signal input  xMirror; // 1 is true, 0 is false
+    signal input xMirror; // 1 is true, 0 is false
     signal input yMirror; // 1 is true, 0 is false
   
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    signal output (pub, perl) <== Reveal()(x,y,PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE,AddBinaryTag()(xMirror),AddBinaryTag()(yMirror));
-}
-
-template addPowerOf2Tag(){
-    signal input in;
-    //To add constraints.
-    signal output {powerof2} out <== in;
+    signal output (pub, perl) <== Reveal()( Add_MaxbitAbs_Tag(31)(x), 
+                                            Add_MaxbitAbs_Tag(31)(y),
+                                            PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE,
+                                            AddBinaryTag()(xMirror),AddBinaryTag()(yMirror));
 }
 
 component main { public [ x, y, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainReveal();

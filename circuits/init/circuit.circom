@@ -10,6 +10,16 @@ include "circuits/mimcsponge.circom";
 include "circuits/comparators.circom";
 include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
+include "circuits/tags_specifications.circom";
+
+/* check abs(in) <= 2^n 
+template Add_MaxbitAbs_Tag(n){
+    signal input in;
+    signal output {maxbit_abs} out;
+    _ <== Num2Bits(n+1)(in + (1 << n));
+    out.maxbit_abs = 31;
+    out <== in;
+}*/
 
 template Init() {
     // Public signals
@@ -23,16 +33,15 @@ template Init() {
     
     assert(SCALE.max <= 16384);
     // Private signals
-    signal input x;
-    signal input y;
+    signal input {maxbit_abs} x;
+    signal input {maxbit_abs} y;
 
     signal output pub;
     signal output perl;
 
-    /* check abs(x), abs(y) <= 2^31 */
-    _ <== Num2Bits(32)(x + (1 << 31));
-    _ <== Num2Bits(32)(y + (1 << 31));
-
+    assert(x.maxbit_abs == 31);
+    assert(y.maxbit_abs == 31);
+    
     /* check x^2 + y^2 < r^2 */
     component compUpper = LessThan(64);
     signal xSq;
@@ -66,7 +75,10 @@ template Init() {
     pub <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    perl <== MultiScalePerlin()([x,y],SPACETYPE_KEY, SCALE, xMirror, yMirror);
+    signal {maxbit_abs} p[2];
+    p.maxbit_abs = x.maxbit_abs;
+    p <== [x,y];
+    perl <== MultiScalePerlin()(p,SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
 
 template mainInit(){
@@ -85,12 +97,11 @@ template mainInit(){
 
 
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    signal output (pub, perl) <== Init()(r, PLANETHASH_KEY, SPACETYPE_KEY, TaggedSCALE, AddBinaryTag()(xMirror), AddBinaryTag()(yMirror), x, y);
+    signal output (pub, perl) <== Init()(r, PLANETHASH_KEY, SPACETYPE_KEY, TaggedSCALE, 
+                                    AddBinaryTag()(xMirror), 
+                                    AddBinaryTag()(yMirror), 
+                                    Add_MaxbitAbs_Tag(31)(x), 
+                                    Add_MaxbitAbs_Tag(31)(y));
 }
 
-template addPowerOf2Tag(){
-    signal input in;
-    //To add constraints.
-    signal output {powerof2} out <== in;
-}
 component main { public [ r, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainInit();

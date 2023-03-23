@@ -12,6 +12,7 @@ include "circuits/mimcsponge.circom";
 include "circuits/comparators.circom";
 include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
+include "circuits/tags_specifications.circom";
 
 template Move() {
     // Public signals
@@ -24,20 +25,20 @@ template Move() {
     signal input {binary} yMirror; // 1 is true, 0 is false
     assert(SCALE.max <= 16384);
     // Private signals
-    signal input x1;
-    signal input y1;
-    signal input x2;
-    signal input y2;
+    signal input {maxbit_abs} x1;
+    signal input {maxbit_abs} y1;
+    signal input {maxbit_abs} x2;
+    signal input {maxbit_abs} y2;
 
     signal output pub1;
     signal output pub2;
     signal output perl2;
 
-    /* check abs(x1), abs(y1), abs(x2), abs(y2) <= 2^31 */
-    _ <== Num2Bits(32)(x1 + (1 << 31));
-    _ <== Num2Bits(32)(y1 + (1 << 31));
-    _ <== Num2Bits(32)(x2 + (1 << 31));
-    _ <== Num2Bits(32)(y2 + (1 << 31));
+    assert(x1.maxbit_abs == 31);
+    assert(y1.maxbit_abs == 31);
+    assert(x2.maxbit_abs == 31);
+    assert(y2.maxbit_abs == 31);
+
 
     /* check x2^2 + y2^2 < r^2 */
 
@@ -87,7 +88,10 @@ template Move() {
     pub2 <== mimc2.outs[0];
 
     /* check perlin(x2, y2) = p2 */
-    perl2 <== MultiScalePerlin()([x2,y2], SPACETYPE_KEY, SCALE, xMirror, yMirror);
+    signal {maxbit_abs} p[2];
+    p.maxbit_abs = x2.maxbit_abs;
+    p <== [x2,y2];
+    perl2 <== MultiScalePerlin()(p, SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
 
 template mainMove(){
@@ -111,13 +115,13 @@ template mainMove(){
     signal output perl2;
 
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    (pub1,pub2,perl2) <== Move()(r,distMax, PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE, AddBinaryTag()(xMirror),AddBinaryTag()(yMirror),x1,y1,x2,y2);
-}
-
-template addPowerOf2Tag(){
-    signal input in;
-    //To add constraints.
-    signal output {powerof2} out <== in;
+    (pub1,pub2,perl2) <== Move()(r,distMax, PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE, 
+                                    AddBinaryTag()(xMirror),
+                                    AddBinaryTag()(yMirror),
+                                    Add_MaxbitAbs_Tag(31)(x1), 
+                                    Add_MaxbitAbs_Tag(31)(y1),
+                                    Add_MaxbitAbs_Tag(31)(x2), 
+                                    Add_MaxbitAbs_Tag(31)(y2));
 }
 
 component main { public [ r, distMax, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainMove();

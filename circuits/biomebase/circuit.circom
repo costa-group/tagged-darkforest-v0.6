@@ -7,6 +7,7 @@ pragma circom 2.0.3;
 
 include "circuits/mimcsponge.circom";
 include "../perlin/perlin.circom";
+include "circuits/tags_specifications.circom";
 
 template Biomebase() {
     // Public signals
@@ -23,8 +24,8 @@ template Biomebase() {
     signal input {binary} yMirror; // 1 is true, 0 is false
 
     // Private signals
-    signal input x;
-    signal input y;
+    signal input {maxbit_abs} x;
+    signal input {maxbit_abs} y;
 
     signal output hash;
     signal output biomeBase;
@@ -43,7 +44,10 @@ template Biomebase() {
     hash <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    biomeBase <== MultiScalePerlin()([x,y], BIOMEBASE_KEY, SCALE, xMirror, yMirror);
+    signal {maxbit_abs} p[2];
+    p.maxbit_abs = x.maxbit_abs;
+    p <== [x,y];
+    biomeBase <== MultiScalePerlin()(p, BIOMEBASE_KEY, SCALE, xMirror, yMirror);
 }
 
 template mainBiomebase() {
@@ -63,13 +67,9 @@ template mainBiomebase() {
     signal input y;
     
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    signal output (hash, biomeBase) <== Biomebase()(PLANETHASH_KEY, BIOMEBASE_KEY, TaggedSCALE, AddBinaryTag()(xMirror), AddBinaryTag()(yMirror), x, y);
-}
-
-template addPowerOf2Tag(){
-    signal input in;
-    //To add constraints.
-    signal output {powerof2} out <== in;
+    signal output (hash, biomeBase) <== Biomebase()(PLANETHASH_KEY, BIOMEBASE_KEY, TaggedSCALE, AddBinaryTag()(xMirror), AddBinaryTag()(yMirror), 
+                                        Add_MaxbitAbs_Tag(31)(x), 
+                                        Add_MaxbitAbs_Tag(31)(y));
 }
 
 component main { public [ PLANETHASH_KEY, BIOMEBASE_KEY, SCALE, xMirror, yMirror ] } = mainBiomebase();
