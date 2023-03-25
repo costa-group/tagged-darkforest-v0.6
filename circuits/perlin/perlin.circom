@@ -447,12 +447,16 @@ template MultiScalePerlin() {
 
     signal outDividedByCount;
     outDividedByCount <== adder.out / 4;
-
+    signal {max} outDividedByCountMult16;
+    outDividedByCountMult16.max = SQRT_P;
+    outDividedByCountMult16 <== outDividedByCount*16;
+    signal {max} sig_denominator;
+    sig_denominator.max = SQRT_P;
+    sig_denominator <== DENOMINATOR;
     // outDividedByCount is between [-DENOMINATOR*sqrt(2)/2, DENOMINATOR*sqrt(2)/2]
     signal divBy16_quotient; // /4 and after than * 16; ¿?
     (_,divBy16_quotient,_,_,_,_,_) <== Modulo(DENOMINATOR_BITS, SQRT_P)(
-        AddMaxValueTag(SQRT_P)(outDividedByCount * 16),
-        AddMaxValueTag(SQRT_P)(DENOMINATOR));
+        outDividedByCountMult16, sig_denominator);
     out <== divBy16_quotient + 16;
 }
 
