@@ -8,7 +8,7 @@ include "circuits/bitify.circom";
 // output: none
 // also checks that both max and abs(in) are expressible in `bits` bits
 template RangeProof(bits) {
-    signal input in;
+    signal input {max}in;
     signal input max_abs_value;
 
     /* check that both max and abs(in) are expressible in `bits` bits  */
@@ -25,7 +25,7 @@ template RangeProof(bits) {
 // input: n field elements, whose abs are claimed to be less than max_abs_value
 // output: none
 template MultiRangeProof(n, bits) {
-    signal input in[n];
+    signal input {max} in[n];
     signal input max_abs_value;
     for (var i = 0; i < n; i++) {
         RangeProof(bits)(in[i],max_abs_value);

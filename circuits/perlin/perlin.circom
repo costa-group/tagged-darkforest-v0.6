@@ -55,11 +55,14 @@ template Random() {
 // -8 + 2 * 5 = 2
 // check: 2 - 2 * 5 = -8
 template Modulo(divisor_bits, SQRT_P) {
-    signal input dividend; // -8
-    signal input divisor; // 5
-    signal output remainder; // 2
-    signal output quotient; // -2
+    signal input {max} dividend; // -8
+    signal input {max} divisor; // 5
+    signal output {max} remainder; // 2
+    signal output {max} quotient; // -2
 
+    assert(dividend.max == SQRT_P);
+    assert(divisor.max == SQRT_P);
+    
     component is_neg = IsNegative();
     is_neg.in <== dividend;
 
@@ -94,10 +97,14 @@ template Modulo(divisor_bits, SQRT_P) {
     signal {binary} elsef;
     elsef <== 1 - iff;
 
+    remainder.max = SQRT_P*SQRT_P-1;
     remainder <== raw_remainder * elsef + is_neg_remainder;
+    //remainder <== AddMaxValueTag(SQRT_P*SQRT_P-1)(raw_remainder * elsef + is_neg_remainder);
 
+    //signal quotient_aux;
+    quotient.max = SQRT_P;
     quotient <-- (dividend - remainder) / divisor; // (-8 - 2) / 5 = -2.
-
+    //quotient <== AddMaxValueTag(SQRT_P)(quotient_aux);
     dividend === divisor * quotient + remainder; // -8 = 5 * -2 + 2.
 
     component rp = MultiRangeProof(3, 128);
@@ -159,10 +166,16 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     assert(scale.maxbit_abs == 31);
 
     signal xmodulo_remainder;
-    (xmodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[0],scale);
+    
+    (xmodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(
+        AddMaxValueTag(SQRT_P)(p[0]),
+        AddMaxValueTag(SQRT_P)(scale));
 
     signal ymodulo_remainder;
-    (ymodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[1],scale);
+    (ymodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(
+        AddMaxValueTag(SQRT_P)(p[1]),
+        AddMaxValueTag(SQRT_P)(scale)
+    );
 
     signal {maxbit_abs} bottomLeftCoords[2];
     bottomLeftCoords.maxbit_abs = p.maxbit_abs;
@@ -437,7 +450,9 @@ template MultiScalePerlin() {
 
     // outDividedByCount is between [-DENOMINATOR*sqrt(2)/2, DENOMINATOR*sqrt(2)/2]
     signal divBy16_quotient; // /4 and after than * 16; ¿?
-    (_,divBy16_quotient,_,_,_,_,_) <== Modulo(DENOMINATOR_BITS, SQRT_P)(outDividedByCount * 16, DENOMINATOR);
+    (_,divBy16_quotient,_,_,_,_,_) <== Modulo(DENOMINATOR_BITS, SQRT_P)(
+        AddMaxValueTag(SQRT_P)(outDividedByCount * 16),
+        AddMaxValueTag(SQRT_P)(DENOMINATOR));
     out <== divBy16_quotient + 16;
 }
 

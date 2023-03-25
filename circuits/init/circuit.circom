@@ -17,7 +17,7 @@ template Add_MaxbitAbs_Tag(n){
     signal input in;
     signal output {maxbit_abs} out;
     _ <== Num2Bits(n+1)(in + (1 << n));
-    out.maxbit_abs = 31;
+    out.maxbit_abs = n;
     out <== in;
 }*/
 
