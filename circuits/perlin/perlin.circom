@@ -107,7 +107,7 @@ template Modulo(divisor_bits, SQRT_P) {
     //quotient <== AddMaxValueTag(SQRT_P)(quotient_aux);
     dividend === divisor * quotient + remainder; // -8 = 5 * -2 + 2.
 
-    component rp = MultiRangeProof(3, 128);
+    component rp = MultiRangeProof(3, log2(SQRT_P));
     rp.in[0] <== divisor;
     rp.in[1] <== quotient;
     rp.in[2] <== dividend;
@@ -460,4 +460,4 @@ template MultiScalePerlin() {
     out <== divBy16_quotient + 16;
 }
 
-// component main = MultiScalePerlin(3); // if you change this n, you also need to recompute DENOMINATOR with JS.
+//component main = MultiScalePerlin(3); // if you change this n, you also need to recompute DENOMINATOR with JS.
