@@ -24,8 +24,8 @@ template Biomebase() {
     signal input {binary} yMirror; // 1 is true, 0 is false
 
     // Private signals
-    signal input {maxbit_abs} x;
-    signal input {maxbit_abs} y;
+    signal input {max_abs} x;
+    signal input {max_abs} y;
 
     signal output hash;
     signal output biomeBase;
@@ -44,8 +44,8 @@ template Biomebase() {
     hash <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    signal {maxbit_abs} p[2];
-    p.maxbit_abs = x.maxbit_abs;
+    signal {max_abs} p[2];
+    p.max_abs = x.max_abs;
     p <== [x,y];
     biomeBase <== MultiScalePerlin()(p, BIOMEBASE_KEY, SCALE, xMirror, yMirror);
 }
@@ -68,8 +68,8 @@ template mainBiomebase() {
     
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
     signal output (hash, biomeBase) <== Biomebase()(PLANETHASH_KEY, BIOMEBASE_KEY, TaggedSCALE, AddBinaryTag()(xMirror), AddBinaryTag()(yMirror), 
-                                        Add_MaxbitAbs_Tag(31)(x), 
-                                        Add_MaxbitAbs_Tag(31)(y));
+                                        Add_MaxAbs_Tag(2^32-1)(x), 
+                                        Add_MaxAbs_Tag(2^32-1)(y));
 }
 
 component main { public [ PLANETHASH_KEY, BIOMEBASE_KEY, SCALE, xMirror, yMirror ] } = mainBiomebase();

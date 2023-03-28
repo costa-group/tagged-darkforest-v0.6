@@ -6,17 +6,18 @@ include "circuits/sign.circom";
 include "circuits/bitify.circom";
 include "../range_proof/circuit.circom";
 include "QuinSelector.circom";
+include "circuits/tags_specifications.circom";
 
 // input: three field elements: x, y, scale (all absolute value < 2^32)
 // output: pseudorandom integer in [0, 15]
 template Random() {
-    signal input {maxbit_abs} in[3];
+    signal input {max_abs} in[3];
     signal input KEY;
     signal output {max} out;
 
     component mimc = MiMCSponge(3, 4, 1);
 
-    assert(in.maxbit_abs == 31);
+    assert(in.max_abs < 2^32);
 
     mimc.ins[0] <== in[0];
     mimc.ins[1] <== in[1];
@@ -114,9 +115,21 @@ template Modulo(divisor_bits, SQRT_P) {
     rp.max_abs_value <== SQRT_P;
 
     // check that 0 <= remainder < divisor
-    component remainderUpper = LessThan(divisor_bits);
+    component remainderUpper = LessThan(log2(divisor.max)+1);
     remainderUpper.in[0] <== remainder;
     remainderUpper.in[1] <== divisor;
+    remainderUpper.out === 1;
+}
+
+template aux(){
+    signal input divisor;
+    signal output {max} divisor_tagged <== AddMaxValueTag(100)(divisor);
+    signal output {max} out;
+    out.max = divisor_tagged.max*2;
+    out <-- divisor;
+    component remainderUpper = LessThan(log2(divisor_tagged.max*2)+1);
+    remainderUpper.in[0] <== out;
+    remainderUpper.in[1] <== divisor*2;
     remainderUpper.out === 1;
 }
 
@@ -125,12 +138,12 @@ template Modulo(divisor_bits, SQRT_P) {
 template RandomGradientAt(DENOMINATOR) {
     var vecs[16][2] = [[1000,0],[923,382],[707,707],[382,923],[0,1000],[-383,923],[-708,707],[-924,382],[-1000,0],[-924,-383],[-708,-708],[-383,-924],[-1,-1000],[382,-924],[707,-708],[923,-383]];
 
-    signal input {maxbit_abs} in[2];
-    signal input {maxbit_abs} scale;
+    signal input {max_abs} in[2];
+    signal input {max_abs} scale;
     signal input KEY;
 
-    assert(in.maxbit_abs == 31);
-    assert(scale.maxbit_abs == 31);
+    assert(in.max_abs < 2^32);
+    assert(scale.max_abs < 2^32);
     
     signal output out[2];
     component rand = Random();
@@ -154,46 +167,44 @@ template RandomGradientAt(DENOMINATOR) {
     out[1] <== ySelector.out * vectorDenominator;
 }
 
-// input: x, y, scale (field elements absolute value < 2^32)
+// input: x, y, scale (field elements absolute value < 2^32) ¡!
 // output: 4 corners of a square with sidelen = scale (INTEGER coords)
 // and parallel array of 4 gradient vectors (NUMERATORS)
 template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
-    signal input {maxbit_abs} p[2];
-    signal input {maxbit_abs} scale;
+    signal input {max} p[2];
+    signal input {max} scale;
     signal input KEY;
 
-    assert(p.maxbit_abs == 31);
-    assert(scale.maxbit_abs == 31);
+    assert(p.max < 2^32);
+    assert(scale.max < 2^32);
 
-    signal xmodulo_remainder;
+    signal {max} xmodulo_remainder;
     
-    (xmodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(
-        AddMaxValueTag(SQRT_P)(p[0]),
-        AddMaxValueTag(SQRT_P)(scale));
+    (xmodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[0],scale);
 
-    signal ymodulo_remainder;
-    (ymodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(
-        AddMaxValueTag(SQRT_P)(p[1]),
-        AddMaxValueTag(SQRT_P)(scale)
-    );
+    signal {max} ymodulo_remainder;
+    (ymodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[1],scale);
 
-    signal {maxbit_abs} bottomLeftCoords[2];
-    bottomLeftCoords.maxbit_abs = p.maxbit_abs;
+    signal {max_abs} bottomLeftCoords[2];
+    bottomLeftCoords.max_abs = p.max;
     bottomLeftCoords[0] <== p[0] - xmodulo_remainder;
     bottomLeftCoords[1] <== p[1] - ymodulo_remainder;
-
-    signal {maxbit_abs} bottomRightCoords[2];
-    bottomRightCoords.maxbit_abs = bottomLeftCoords.maxbit_abs;
+    //signal {max} check_bottomLeftCoords;
+    //check_bottomLeftCoords.max = 2* (bottomLeftCoords.max_abs);
+    //check_bottomLeftCoords <== bottomLeftCoords[0] + bottomLeftCoords.max_abs;
+   
+    signal {max_abs} bottomRightCoords[2];
+    bottomRightCoords.max_abs = bottomLeftCoords.max_abs;
     bottomRightCoords[0] <== bottomLeftCoords[0] + scale;
     bottomRightCoords[1] <== bottomLeftCoords[1];
 
-    signal {maxbit_abs} topLeftCoords[2];
-    topLeftCoords.maxbit_abs = bottomLeftCoords.maxbit_abs;
+    signal {max_abs} topLeftCoords[2];
+    topLeftCoords.max_abs = bottomLeftCoords.max_abs;
     topLeftCoords[0] <== bottomLeftCoords[0];
     topLeftCoords[1] <== bottomLeftCoords[1] + scale;
 
-    signal {maxbit_abs} topRightCoords[2];
-    topRightCoords.maxbit_abs = bottomLeftCoords.maxbit_abs;
+    signal {max_abs} topRightCoords[2];
+    topRightCoords.max_abs = bottomLeftCoords.max_abs;
     topRightCoords[0] <== bottomLeftCoords[0] + scale;
     topRightCoords[1] <== bottomLeftCoords[1] + scale;
 
@@ -371,9 +382,9 @@ template PerlinValue(DENOMINATOR) {
 }
 
 template SingleScalePerlin(scale_bits, DENOMINATOR, SQRT_P) {
-    signal input {maxbit_abs} p[2];
+    signal input {max} p[2];
     signal input KEY;
-    signal input {maxbit_abs} SCALE;
+    signal input {max} SCALE;
     signal output out;
     component cornersAndGrads = GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P);
     component perlinValue = PerlinValue(DENOMINATOR);
@@ -397,10 +408,10 @@ template SingleScalePerlin(scale_bits, DENOMINATOR, SQRT_P) {
 
 
 template MakeFlipIfShould(){
-    signal input {maxbit_abs} in;
+    signal input {max_abs} in;
     signal input {binary} should_flip;
-    signal output {maxbit_abs} out;
-    out.maxbit_abs = in.maxbit_abs;
+    signal output {max} out;
+    out.max = in.max_abs;
     out <== in * (-2 * should_flip + 1);
 }
 
@@ -409,7 +420,7 @@ template MultiScalePerlin() {
     var DENOMINATOR_BITS = 61;
     var SQRT_P = 1000000000000000000000000000000000000;
 
-    signal input {maxbit_abs} p[2];
+    signal input {max_abs} p[2];
     signal input KEY;
     signal input {powerof2, max} SCALE; // power of 2 at most 16384 so that DENOMINATOR works
     assert(SCALE.max <= 16384);
@@ -418,7 +429,7 @@ template MultiScalePerlin() {
     signal output out;
     component perlins[3];
 
-    assert(p.maxbit_abs == 31);
+    assert(p.max_abs < 2^32);
 
     component xIsNegative = IsNegative();
     component yIsNegative = IsNegative();
@@ -440,7 +451,7 @@ template MultiScalePerlin() {
         perlins[i].p[0] <== MakeFlipIfShould()(p[0],xSignShouldFlip[i]);
         perlins[i].p[1] <==  MakeFlipIfShould()(p[1],xSignShouldFlip[i]);
         perlins[i].KEY <== KEY;
-        perlins[i].SCALE <== Add_MaxbitAbs_Tag(31)(SCALE * 2 ** i);
+        perlins[i].SCALE <== AddMaxValueTag(SCALE.max*2**i)(SCALE * 2 ** i);
         adder.in[i] <== perlins[i].out;
     }
     adder.in[3] <== perlins[0].out;
@@ -460,4 +471,14 @@ template MultiScalePerlin() {
     out <== divBy16_quotient + 16;
 }
 
-//component main = MultiScalePerlin(3); // if you change this n, you also need to recompute DENOMINATOR with JS.
+//component main = Checking template Modulo(61,1000000000000000000000000000000000000,1000000000000000000000000000000000000,1000000000000000000000000000000000000);
+
+
+template main_mod(DIV, SQRT_P){
+    signal input D;
+    signal input d;
+    signal output {max} q;
+    signal output {max} r;
+    (q,r,_,_,_,_,_) <== Modulo(DIV, SQRT_P)(AddMaxValueTag(SQRT_P)(D),AddMaxValueTag(SQRT_P)(d));   
+}
+

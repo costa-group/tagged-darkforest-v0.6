@@ -12,8 +12,8 @@ include "circuits/tags_specifications.circom";
 
 template Reveal() {
     // Public signals
-    signal input {maxbit_abs} x;
-    signal input {maxbit_abs} y;
+    signal input {max_abs} x;
+    signal input {max_abs} y;
     signal input PLANETHASH_KEY;
     signal input SPACETYPE_KEY;
     signal input {powerof2, max} SCALE; /// must be power of 2 at most 16384 so that DENOMINATOR works
@@ -24,8 +24,8 @@ template Reveal() {
     signal output pub;
     signal output perl;
 
-    assert(x.maxbit_abs == 31);
-    assert(y.maxbit_abs == 31);
+    assert(x.max_abs < 2^32);
+    assert(y.max_abs < 2^32);
 
     /* check MiMCSponge(x,y) = pub */
     /*
@@ -41,8 +41,8 @@ template Reveal() {
     pub <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    signal {maxbit_abs} p[2];
-    p.maxbit_abs = x.maxbit_abs;
+    signal {max_abs} p[2];
+    p.max_abs = x.max_abs;
     p <== [x,y];
     perl <== MultiScalePerlin()(p,SPACETYPE_KEY,SCALE, xMirror, yMirror);
 }
@@ -58,8 +58,8 @@ template mainReveal(){
     signal input yMirror; // 1 is true, 0 is false
   
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    signal output (pub, perl) <== Reveal()( Add_MaxbitAbs_Tag(31)(x), 
-                                            Add_MaxbitAbs_Tag(31)(y),
+    signal output (pub, perl) <== Reveal()( Add_MaxAbs_Tag(2^32-1)(x), 
+                                            Add_MaxAbs_Tag(2^32-1)(y),
                                             PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE,
                                             AddBinaryTag()(xMirror),AddBinaryTag()(yMirror));
 }

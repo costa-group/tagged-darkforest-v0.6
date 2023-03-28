@@ -25,19 +25,19 @@ template Move() {
     signal input {binary} yMirror; // 1 is true, 0 is false
     assert(SCALE.max <= 16384);
     // Private signals
-    signal input {maxbit_abs} x1;
-    signal input {maxbit_abs} y1;
-    signal input {maxbit_abs} x2;
-    signal input {maxbit_abs} y2;
+    signal input {max_abs} x1;
+    signal input {max_abs} y1;
+    signal input {max_abs} x2;
+    signal input {max_abs} y2;
 
     signal output pub1;
     signal output pub2;
     signal output perl2;
 
-    assert(x1.maxbit_abs == 31);
-    assert(y1.maxbit_abs == 31);
-    assert(x2.maxbit_abs == 31);
-    assert(y2.maxbit_abs == 31);
+    assert(x1.max_abs < 2^32);
+    assert(y1.max_abs < 2^32);
+    assert(x2.max_abs < 2^32);
+    assert(y2.max_abs < 2^32);
 
 
     /* check x2^2 + y2^2 < r^2 */
@@ -88,8 +88,8 @@ template Move() {
     pub2 <== mimc2.outs[0];
 
     /* check perlin(x2, y2) = p2 */
-    signal {maxbit_abs} p[2];
-    p.maxbit_abs = x2.maxbit_abs;
+    signal {max_abs} p[2];
+    p.max_abs = x2.max_abs;
     p <== [x2,y2];
     perl2 <== MultiScalePerlin()(p, SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
@@ -118,10 +118,10 @@ template mainMove(){
     (pub1,pub2,perl2) <== Move()(r,distMax, PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE, 
                                     AddBinaryTag()(xMirror),
                                     AddBinaryTag()(yMirror),
-                                    Add_MaxbitAbs_Tag(31)(x1), 
-                                    Add_MaxbitAbs_Tag(31)(y1),
-                                    Add_MaxbitAbs_Tag(31)(x2), 
-                                    Add_MaxbitAbs_Tag(31)(y2));
+                                    Add_MaxAbs_Tag(2^32-1)(x1), 
+                                    Add_MaxAbs_Tag(2^32-1)(y1),
+                                    Add_MaxAbs_Tag(2^32-1)(x2), 
+                                    Add_MaxAbs_Tag(2^32-1)(y2));
 }
 
 component main { public [ r, distMax, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainMove();

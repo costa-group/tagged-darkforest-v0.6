@@ -33,14 +33,14 @@ template Init() {
     
     assert(SCALE.max <= 16384);
     // Private signals
-    signal input {maxbit_abs} x;
-    signal input {maxbit_abs} y;
+    signal input {max_abs} x;
+    signal input {max_abs} y;
 
     signal output pub;
     signal output perl;
 
-    assert(x.maxbit_abs == 31);
-    assert(y.maxbit_abs == 31);
+    assert(x.max_abs < 2^32);
+    assert(y.max_abs < 2^32);
     
     /* check x^2 + y^2 < r^2 */
     component compUpper = LessThan(64);
@@ -75,8 +75,8 @@ template Init() {
     pub <== mimc.outs[0];
 
     /* check perlin(x, y) = p */
-    signal {maxbit_abs} p[2];
-    p.maxbit_abs = x.maxbit_abs;
+    signal {max_abs} p[2];
+    p.max_abs = x.max_abs;
     p <== [x,y];
     perl <== MultiScalePerlin()(p,SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
@@ -100,8 +100,8 @@ template mainInit(){
     signal output (pub, perl) <== Init()(r, PLANETHASH_KEY, SPACETYPE_KEY, TaggedSCALE, 
                                     AddBinaryTag()(xMirror), 
                                     AddBinaryTag()(yMirror), 
-                                    Add_MaxbitAbs_Tag(31)(x), 
-                                    Add_MaxbitAbs_Tag(31)(y));
+                                    Add_MaxAbs_Tag(2^32-1)(x), 
+                                    Add_MaxAbs_Tag(2^32-1)(y));
 }
 
 component main { public [ r, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainInit();
