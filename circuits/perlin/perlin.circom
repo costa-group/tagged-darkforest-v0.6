@@ -6,7 +6,7 @@ include "circuits/sign.circom";
 include "circuits/bitify.circom";
 include "../range_proof/circuit.circom";
 include "QuinSelector.circom";
-include "circuits/tags_specifications.circom";
+//include "circuits/tags_specifications.circom";
 
 // input: three field elements: x, y, scale (all absolute value < 2^32)
 // output: pseudorandom integer in [0, 15]
@@ -17,7 +17,7 @@ template Random() {
 
     component mimc = MiMCSponge(3, 4, 1);
 
-    assert(in.max_abs < 2^32);
+    assert(in.max_abs < 2**32);
 
     mimc.ins[0] <== in[0];
     mimc.ins[1] <== in[1];
@@ -61,8 +61,8 @@ template Modulo(divisor_bits, SQRT_P) {
     signal output {max} remainder; // 2
     signal output {max} quotient; // -2
 
-    assert(dividend.max == SQRT_P);
-    assert(divisor.max == SQRT_P);
+    assert(dividend.max <= SQRT_P);
+    assert(divisor.max <= SQRT_P);
     
     component is_neg = IsNegative();
     is_neg.in <== dividend;
@@ -142,8 +142,8 @@ template RandomGradientAt(DENOMINATOR) {
     signal input {max_abs} scale;
     signal input KEY;
 
-    assert(in.max_abs < 2^32);
-    assert(scale.max_abs < 2^32);
+    assert(in.max_abs < 2**32);
+    assert(scale.max_abs < 2**32);
     
     signal output out[2];
     component rand = Random();
@@ -174,10 +174,12 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     signal input {max} p[2];
     signal input {max} scale;
     signal input KEY;
-
-    assert(p.max < 2^32);
-    assert(scale.max < 2^32);
-
+    
+    assert(p.max < 2**32);
+    assert(scale.max < 2**32);
+    signal {max_abs} abs_scale;
+    abs_scale.max_abs = scale.max;
+    abs_scale <== scale;
     signal {max} xmodulo_remainder;
     
     (xmodulo_remainder,_,_,_,_,_,_) <== Modulo(scale_bits, SQRT_P)(p[0],scale);
@@ -211,7 +213,7 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     component bottomLeftRandGrad = RandomGradientAt(DENOMINATOR);
     bottomLeftRandGrad.in[0] <== bottomLeftCoords[0];
     bottomLeftRandGrad.in[1] <== bottomLeftCoords[1];
-    bottomLeftRandGrad.scale <== scale;
+    bottomLeftRandGrad.scale <== abs_scale;
     bottomLeftRandGrad.KEY <== KEY;
     signal bottomLeftGrad[2];
     bottomLeftGrad[0] <== bottomLeftRandGrad.out[0];
@@ -220,7 +222,7 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     component bottomRightRandGrad = RandomGradientAt(DENOMINATOR);
     bottomRightRandGrad.in[0] <== bottomRightCoords[0];
     bottomRightRandGrad.in[1] <== bottomRightCoords[1];
-    bottomRightRandGrad.scale <== scale;
+    bottomRightRandGrad.scale <== abs_scale;
     bottomRightRandGrad.KEY <== KEY;
     signal bottomRightGrad[2];
     bottomRightGrad[0] <== bottomRightRandGrad.out[0];
@@ -229,7 +231,7 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     component topLeftRandGrad = RandomGradientAt(DENOMINATOR);
     topLeftRandGrad.in[0] <== topLeftCoords[0];
     topLeftRandGrad.in[1] <== topLeftCoords[1];
-    topLeftRandGrad.scale <== scale;
+    topLeftRandGrad.scale <== abs_scale;
     topLeftRandGrad.KEY <== KEY;
     signal topLeftGrad[2];
     topLeftGrad[0] <== topLeftRandGrad.out[0];
@@ -238,7 +240,7 @@ template GetCornersAndGradVectors(scale_bits, DENOMINATOR, SQRT_P) {
     component topRightRandGrad = RandomGradientAt(DENOMINATOR);
     topRightRandGrad.in[0] <== topRightCoords[0];
     topRightRandGrad.in[1] <== topRightCoords[1];
-    topRightRandGrad.scale <== scale;
+    topRightRandGrad.scale <== abs_scale;
     topRightRandGrad.KEY <== KEY;
     signal topRightGrad[2];
     topRightGrad[0] <== topRightRandGrad.out[0];
@@ -429,7 +431,7 @@ template MultiScalePerlin() {
     signal output out;
     component perlins[3];
 
-    assert(p.max_abs < 2^32);
+    assert(p.max_abs < 2**32);
 
     component xIsNegative = IsNegative();
     component yIsNegative = IsNegative();
@@ -451,7 +453,7 @@ template MultiScalePerlin() {
         perlins[i].p[0] <== MakeFlipIfShould()(p[0],xSignShouldFlip[i]);
         perlins[i].p[1] <==  MakeFlipIfShould()(p[1],xSignShouldFlip[i]);
         perlins[i].KEY <== KEY;
-        perlins[i].SCALE <== AddMaxValueTag(SCALE.max*2**i)(SCALE * 2 ** i);
+        perlins[i].SCALE <== AddMaxValueTag(SCALE.max*(2**i))(SCALE * 2 ** i);
         adder.in[i] <== perlins[i].out;
     }
     adder.in[3] <== perlins[0].out;

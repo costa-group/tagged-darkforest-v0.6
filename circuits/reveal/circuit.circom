@@ -24,8 +24,8 @@ template Reveal() {
     signal output pub;
     signal output perl;
 
-    assert(x.max_abs < 2^32);
-    assert(y.max_abs < 2^32);
+    assert(x.max_abs < 2**32);
+    assert(y.max_abs < 2**32);
 
     /* check MiMCSponge(x,y) = pub */
     /*
@@ -58,8 +58,8 @@ template mainReveal(){
     signal input yMirror; // 1 is true, 0 is false
   
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
-    signal output (pub, perl) <== Reveal()( Add_MaxAbs_Tag(2^32-1)(x), 
-                                            Add_MaxAbs_Tag(2^32-1)(y),
+    signal output (pub, perl) <== Reveal()( Add_MaxAbs_Tag(2**32-1)(x), 
+                                            Add_MaxAbs_Tag(2**32-1)(y),
                                             PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE,
                                             AddBinaryTag()(xMirror),AddBinaryTag()(yMirror));
 }

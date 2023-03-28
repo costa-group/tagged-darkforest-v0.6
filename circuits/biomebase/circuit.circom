@@ -68,8 +68,8 @@ template mainBiomebase() {
     
     signal {powerof2, max} TaggedSCALE <== AddMaxValueTag(16384)(addPowerOf2Tag()(SCALE));
     signal output (hash, biomeBase) <== Biomebase()(PLANETHASH_KEY, BIOMEBASE_KEY, TaggedSCALE, AddBinaryTag()(xMirror), AddBinaryTag()(yMirror), 
-                                        Add_MaxAbs_Tag(2^32-1)(x), 
-                                        Add_MaxAbs_Tag(2^32-1)(y));
+                                        Add_MaxAbs_Tag(2**32-1)(x), 
+                                        Add_MaxAbs_Tag(2**32-1)(y));
 }
 
 component main { public [ PLANETHASH_KEY, BIOMEBASE_KEY, SCALE, xMirror, yMirror ] } = mainBiomebase();

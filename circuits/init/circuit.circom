@@ -39,8 +39,8 @@ template Init() {
     signal output pub;
     signal output perl;
 
-    assert(x.max_abs < 2^32);
-    assert(y.max_abs < 2^32);
+    assert(x.max_abs < 2**32);
+    assert(y.max_abs < 2**32);
     
     /* check x^2 + y^2 < r^2 */
     component compUpper = LessThan(64);
@@ -100,8 +100,8 @@ template mainInit(){
     signal output (pub, perl) <== Init()(r, PLANETHASH_KEY, SPACETYPE_KEY, TaggedSCALE, 
                                     AddBinaryTag()(xMirror), 
                                     AddBinaryTag()(yMirror), 
-                                    Add_MaxAbs_Tag(2^32-1)(x), 
-                                    Add_MaxAbs_Tag(2^32-1)(y));
+                                    Add_MaxAbs_Tag(2**32-1)(x), 
+                                    Add_MaxAbs_Tag(2**32-1)(y));
 }
 
 component main { public [ r, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainInit();

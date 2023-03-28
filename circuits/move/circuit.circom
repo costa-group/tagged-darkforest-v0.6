@@ -34,10 +34,10 @@ template Move() {
     signal output pub2;
     signal output perl2;
 
-    assert(x1.max_abs < 2^32);
-    assert(y1.max_abs < 2^32);
-    assert(x2.max_abs < 2^32);
-    assert(y2.max_abs < 2^32);
+    assert(x1.max_abs < 2**32);
+    assert(y1.max_abs < 2**32);
+    assert(x2.max_abs < 2**32);
+    assert(y2.max_abs < 2**32);
 
 
     /* check x2^2 + y2^2 < r^2 */
@@ -118,10 +118,10 @@ template mainMove(){
     (pub1,pub2,perl2) <== Move()(r,distMax, PLANETHASH_KEY,SPACETYPE_KEY,TaggedSCALE, 
                                     AddBinaryTag()(xMirror),
                                     AddBinaryTag()(yMirror),
-                                    Add_MaxAbs_Tag(2^32-1)(x1), 
-                                    Add_MaxAbs_Tag(2^32-1)(y1),
-                                    Add_MaxAbs_Tag(2^32-1)(x2), 
-                                    Add_MaxAbs_Tag(2^32-1)(y2));
+                                    Add_MaxAbs_Tag(2**32-1)(x1), 
+                                    Add_MaxAbs_Tag(2**32-1)(y1),
+                                    Add_MaxAbs_Tag(2**32-1)(x2), 
+                                    Add_MaxAbs_Tag(2**32-1)(y2));
 }
 
 component main { public [ r, distMax, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror ] } = mainMove();
