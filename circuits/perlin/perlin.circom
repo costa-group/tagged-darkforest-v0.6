@@ -61,8 +61,8 @@ template Modulo(divisor_bits, SQRT_P) {
     signal output {max} remainder; // 2
     signal output {max} quotient; // -2
 
-    assert(dividend.max <= SQRT_P);
-    assert(divisor.max <= SQRT_P);
+    assert(dividend.max < SQRT_P);
+    assert(divisor.max < SQRT_P);
     
     component is_neg = IsNegative();
     is_neg.in <== dividend;
@@ -461,10 +461,10 @@ template MultiScalePerlin() {
     signal outDividedByCount;
     outDividedByCount <== adder.out / 4;
     signal {max} outDividedByCountMult16;
-    outDividedByCountMult16.max = SQRT_P;
+    outDividedByCountMult16.max = SQRT_P-1;
     outDividedByCountMult16 <== outDividedByCount*16;
     signal {max} sig_denominator;
-    sig_denominator.max = SQRT_P;
+    sig_denominator.max = SQRT_P-1;
     sig_denominator <== DENOMINATOR;
     // outDividedByCount is between [-DENOMINATOR*sqrt(2)/2, DENOMINATOR*sqrt(2)/2]
     signal divBy16_quotient; // /4 and after than * 16; ¿?
@@ -481,6 +481,6 @@ template main_mod(DIV, SQRT_P){
     signal input d;
     signal output {max} q;
     signal output {max} r;
-    (q,r,_,_,_,_,_) <== Modulo(DIV, SQRT_P)(AddMaxValueTag(SQRT_P)(D),AddMaxValueTag(SQRT_P)(d));   
+    (q,r,_,_,_,_,_) <== Modulo(DIV, SQRT_P)(AddMaxValueTag(SQRT_P-1)(D),AddMaxValueTag(SQRT_P-1)(d));   
 }
 
