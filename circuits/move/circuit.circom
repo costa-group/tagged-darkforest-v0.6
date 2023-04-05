@@ -38,12 +38,6 @@ template Move() {
     signal output pub2;
     signal output perl2;
 
-    assert(x1.max_abs < 2**32);
-    assert(y1.max_abs < 2**32);
-    assert(x2.max_abs < 2**32);
-    assert(y2.max_abs < 2**32);
-
-
     /* check x2^2 + y2^2 < r^2 */
 
     component comp2 = LessThan(64);
@@ -93,7 +87,7 @@ template Move() {
 
     /* check perlin(x2, y2) = p2 */
     signal {max_abs} p[2];
-    p.max_abs = x2.max_abs;
+    p.max_abs = x2.max_abs > y2.max_abs ? x2.max_abs : y2.max_abs;
     p <== [x2,y2];
     perl2 <== MultiScalePerlin()(p, SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }

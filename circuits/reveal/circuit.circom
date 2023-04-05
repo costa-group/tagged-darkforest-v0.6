@@ -42,7 +42,7 @@ template Reveal() {
 
     /* check perlin(x, y) = p */
     signal {max_abs} p[2];
-    p.max_abs = x.max_abs;
+    p.max_abs = x.max_abs > y.max_abs ? x.max_abs : y.max_abs;
     p <== [x,y];
     perl <== MultiScalePerlin()(p,SPACETYPE_KEY,SCALE, xMirror, yMirror);
 }

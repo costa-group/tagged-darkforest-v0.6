@@ -31,9 +31,6 @@ template Init() {
 
     signal output pub;
     signal output perl;
-
-    assert(x.max_abs < 2**32);
-    assert(y.max_abs < 2**32);
     
     /* check x^2 + y^2 < r^2 */
     component compUpper = LessThan(64);
@@ -69,7 +66,7 @@ template Init() {
 
     /* check perlin(x, y) = p */
     signal {max_abs} p[2];
-    p.max_abs = x.max_abs;
+    p.max_abs = x.max_abs > y.max_abs ? x.max_abs : y.max_abs;
     p <== [x,y];
     perl <== MultiScalePerlin()(p,SPACETYPE_KEY, SCALE, xMirror, yMirror);
 }
