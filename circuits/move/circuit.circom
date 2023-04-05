@@ -6,7 +6,7 @@
     - MiMCSponge(x1,y1) = pub1
     - MiMCSponge(x2,y2) = pub2
 */
-pragma circom 2.0.3;
+pragma circom 2.1.4;
 
 include "circuits/mimcsponge.circom";
 include "circuits/comparators.circom";
@@ -26,9 +26,13 @@ template Move() {
     assert(SCALE.max <= 16384);
     // Private signals
     signal input {max_abs} x1;
+    assert(x1.max_abs < 2**32);
     signal input {max_abs} y1;
+    assert(y1.max_abs < 2**32);
     signal input {max_abs} x2;
+    assert(x2.max_abs < 2**32);
     signal input {max_abs} y2;
+    assert(y2.max_abs < 2**32);
 
     signal output pub1;
     signal output pub2;

@@ -3,7 +3,7 @@
     - biomeperlin(x, y) = biomeBase
     - MiMCSponge(x,y) = hash
 */
-pragma circom 2.0.3;
+pragma circom 2.1.4;
 
 include "circuits/mimcsponge.circom";
 include "../perlin/perlin.circom";
@@ -25,8 +25,9 @@ template Biomebase() {
 
     // Private signals
     signal input {max_abs} x;
+    assert(x.max_abs < 2**32);
     signal input {max_abs} y;
-
+    assert(y.max_abs < 2**32);
     signal output hash;
     signal output biomeBase;
 
@@ -45,7 +46,7 @@ template Biomebase() {
 
     /* check perlin(x, y) = p */
     signal {max_abs} p[2];
-    p.max_abs = x.max_abs;
+    p.max_abs = x.max_abs > y.max_abs ? x.max_abs : y.max_abs;
     p <== [x,y];
     biomeBase <== MultiScalePerlin()(p, BIOMEBASE_KEY, SCALE, xMirror, yMirror);
 }

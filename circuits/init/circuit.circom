@@ -4,22 +4,13 @@
     - perlin(x, y) = p
     - MiMCSponge(x,y) = pub
 */
-pragma circom 2.0.3;
+pragma circom 2.1.4;
 
 include "circuits/mimcsponge.circom";
 include "circuits/comparators.circom";
 include "circuits/bitify.circom";
 include "../perlin/perlin.circom";
 include "circuits/tags_specifications.circom";
-
-/* check abs(in) <= 2^n 
-template Add_MaxbitAbs_Tag(n){
-    signal input in;
-    signal output {maxbit_abs} out;
-    _ <== Num2Bits(n+1)(in + (1 << n));
-    out.maxbit_abs = n;
-    out <== in;
-}*/
 
 template Init() {
     // Public signals
@@ -34,7 +25,9 @@ template Init() {
     assert(SCALE.max <= 16384);
     // Private signals
     signal input {max_abs} x;
+    assert(x.max_abs < 2**32);
     signal input {max_abs} y;
+    assert(y.max_abs < 2**32);
 
     signal output pub;
     signal output perl;

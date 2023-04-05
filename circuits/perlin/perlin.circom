@@ -1,4 +1,4 @@
-pragma circom 2.0.3;
+pragma circom 2.1.4;
 
 include "circuits/mimcsponge.circom";
 include "circuits/comparators.circom";
@@ -108,6 +108,7 @@ template Modulo(divisor_bits, SQRT_P) {
     //quotient <== AddMaxValueTag(SQRT_P)(quotient_aux);
     dividend === divisor * quotient + remainder; // -8 = 5 * -2 + 2.
 
+    //Maybe, we should change {max} divisor, quotient to max_abs?
     component rp = MultiRangeProof(3, log2(SQRT_P));
     rp.in[0] <== divisor;
     rp.in[1] <== quotient;
@@ -118,18 +119,6 @@ template Modulo(divisor_bits, SQRT_P) {
     component remainderUpper = LessThan(log2(divisor.max)+1);
     remainderUpper.in[0] <== remainder;
     remainderUpper.in[1] <== divisor;
-    remainderUpper.out === 1;
-}
-
-template aux(){
-    signal input divisor;
-    signal output {max} divisor_tagged <== AddMaxValueTag(100)(divisor);
-    signal output {max} out;
-    out.max = divisor_tagged.max*2;
-    out <-- divisor;
-    component remainderUpper = LessThan(log2(divisor_tagged.max*2)+1);
-    remainderUpper.in[0] <== out;
-    remainderUpper.in[1] <== divisor*2;
     remainderUpper.out === 1;
 }
 

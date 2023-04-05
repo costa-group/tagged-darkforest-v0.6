@@ -3,7 +3,7 @@
     - MiMCSponge(x,y) = pub
     - perlin(x, y) = perl
 */
-pragma circom 2.0.3;
+pragma circom 2.1.4;
 
 include "circuits/mimcsponge.circom";
 include "circuits/bitify.circom";
